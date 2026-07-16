@@ -51,3 +51,17 @@ Pin security-critical dependencies instead of relying on the latest transitive v
 ### Lessons Learned
 
 Always verify dependency compatibility before debugging application logic.
+
+
+## Graph build not persisted
+
+### Symptoms
+POST /graph/workspaces/{workspace_id}/build returned nodes and edges correctly, but GET /graph/workspaces/{workspace_id} always returned an empty graph.
+
+### Root Cause
+The repository inserted graph nodes and edges using SQLAlchemy `flush()` but never committed the transaction. The graph existed only within the request transaction and was never persisted to PostgreSQL.
+
+### Resolution
+Committed graph writes in `postgres_graph_repository.py` and added an end-to-end regression test verifying that:
+- POST /graph/workspaces/{workspace_id}/build persists the graph.
+- GET /graph/workspaces/{workspace_id} returns the same persisted graph.

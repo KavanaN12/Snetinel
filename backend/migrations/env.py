@@ -10,6 +10,10 @@ from src.shared.db.session import Base
 from src.modules.auth.infrastructure.models import UserModel, RefreshTokenModel  # noqa: F401
 from src.modules.discovery.infrastructure.models import DiscoveryRunModel  # noqa: F401
 from src.modules.workspace.infrastructure.models import WorkspaceModel  # noqa: F401
+from src.modules.graph.infrastructure.models import GraphNodeModel, GraphEdgeModel  # noqa: F401
+from src.modules.attack_path.infrastructure.models import AttackPathModel  # noqa: F401
+from src.modules.risk_scoring.infrastructure.models import FindingModel  # noqa: F401
+from src.modules.audit.infrastructure.models import AuditLogModel  # noqa: F401
 
 config = context.config
 
