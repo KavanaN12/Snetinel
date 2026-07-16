@@ -1,4 +1,4 @@
-"""Discovery run domain entity."""
+"""Discovery-related domain entities."""
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,3 +16,17 @@ class DiscoveryRun:
     started_at: datetime
     completed_at: datetime | None
     created_at: datetime
+
+
+@dataclass(frozen=True)
+class DiscoveredCloudResource:
+    id: UUID
+    workspace_id: UUID
+    discovery_run_id: UUID
+    resource_type: str
+    resource_id: str
+    name: str
+    arn: str | None
+    details: dict[str, object]
+    created_at: datetime
+    updated_at: datetime | None

@@ -63,6 +63,33 @@ class PostgresDiscoveryRepository:
         model = await self._session.get(DiscoveryRunModel, _coerce_uuid(discovery_run_id))
         return _to_entity(model) if model else None
 
+    async def update_status(
+        self,
+        discovery_run_id: UUID | str,
+        *,
+        status: str | None = None,
+        summary: str | None = None,
+        resource_count: int | None = None,
+        discovered_resources: list[dict[str, str]] | None = None,
+        completed_at=None,
+    ) -> DiscoveryRun | None:
+        model = await self._session.get(DiscoveryRunModel, _coerce_uuid(discovery_run_id))
+        if model is None:
+            return None
+        if status is not None:
+            model.status = status
+        if summary is not None:
+            model.summary = summary
+        if resource_count is not None:
+            model.resource_count = resource_count
+        if discovered_resources is not None:
+            model.discovered_resources = discovered_resources
+        if completed_at is not None:
+            model.completed_at = completed_at
+        await self._session.flush()
+        await self._session.refresh(model)
+        return _to_entity(model)
+
 
 def _coerce_uuid(value: UUID | str) -> UUID:
     if isinstance(value, UUID):

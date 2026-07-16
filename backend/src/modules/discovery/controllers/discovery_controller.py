@@ -6,9 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.discovery.domain.exceptions import DiscoveryRunNotFoundError
+from src.modules.discovery.queue.job_queue import RedisJobQueue
+from src.modules.discovery.repositories.postgres_cloud_resource_repository import PostgresCloudResourceRepository
 from src.modules.discovery.repositories.postgres_discovery_repository import PostgresDiscoveryRepository
 from src.modules.discovery.schemas.requests import DiscoveryRunRequest
-from src.modules.discovery.schemas.responses import DiscoveryRunResponse
+from src.modules.discovery.schemas.responses import DiscoveredCloudResourceResponse, DiscoveryRunResponse
 from src.modules.discovery.services.discovery_service import DiscoveryService
 from src.modules.workspace.domain.exceptions import WorkspaceAccessDeniedError, WorkspaceNotFoundError
 from src.modules.workspace.repositories.postgres_workspace_repository import PostgresWorkspaceRepository
@@ -21,7 +23,8 @@ router = APIRouter(prefix="/discovery", tags=["discovery"])
 def get_discovery_service(session: AsyncSession = Depends(get_db_session)) -> DiscoveryService:
     discovery_repository = PostgresDiscoveryRepository(session)
     workspace_repository = PostgresWorkspaceRepository(session)
-    return DiscoveryService(discovery_repository, workspace_repository)
+    cloud_resource_repository = PostgresCloudResourceRepository(session)
+    return DiscoveryService(discovery_repository, workspace_repository, queue=RedisJobQueue(), cloud_resource_repository=cloud_resource_repository)
 
 
 @router.post("/workspaces/{workspace_id}/discover", response_model=DiscoveryRunResponse, status_code=status.HTTP_201_CREATED)
@@ -72,3 +75,33 @@ async def get_discovery_run(
     except WorkspaceAccessDeniedError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     return DiscoveryRunResponse.model_validate(run, from_attributes=True)
+
+
+@router.get("/workspaces/{workspace_id}/resources", response_model=list[DiscoveredCloudResourceResponse])
+async def list_discovered_resources(
+    workspace_id: UUID,
+    current_user_id: str = Depends(get_current_user_id),
+    service: DiscoveryService = Depends(get_discovery_service),
+) -> list[DiscoveredCloudResourceResponse]:
+    try:
+        resources = await service.list_resources_for_workspace(workspace_id=workspace_id, current_user_id=current_user_id)
+    except WorkspaceNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except WorkspaceAccessDeniedError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    return [DiscoveredCloudResourceResponse.model_validate(resource, from_attributes=True) for resource in resources]
+
+
+@router.get("/resources/{resource_id}", response_model=DiscoveredCloudResourceResponse)
+async def get_discovered_resource(
+    resource_id: UUID,
+    current_user_id: str = Depends(get_current_user_id),
+    service: DiscoveryService = Depends(get_discovery_service),
+) -> DiscoveredCloudResourceResponse:
+    try:
+        resource = await service.get_resource(resource_id=resource_id, current_user_id=current_user_id)
+    except DiscoveryRunNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except WorkspaceAccessDeniedError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    return DiscoveredCloudResourceResponse.model_validate(resource, from_attributes=True)

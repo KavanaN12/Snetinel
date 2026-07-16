@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     LOGIN_RATE_LIMIT_ATTEMPTS: int = 5
     LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 300  # 5 minutes
 
+    # --- Queue / Cloud discovery ---
+    REDIS_URL: str = "redis://localhost:6379/0"
+    DISCOVERY_QUEUE_NAME: str = "discovery_jobs"
+    AWS_REGION: str = "us-east-1"
+    AWS_ACCESS_KEY_ID: str = "test"
+    AWS_SECRET_ACCESS_KEY: str = "test"
+    AWS_ENDPOINT_URL: str = "http://localhost:4566"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

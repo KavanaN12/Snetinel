@@ -37,9 +37,18 @@ async def test_engine():
 
 
 @pytest_asyncio.fixture
-async def client(test_engine):
-    session_factory = async_sessionmaker(bind=test_engine, expire_on_commit=False)
+async def session_factory(test_engine):
+    return async_sessionmaker(bind=test_engine, expire_on_commit=False)
 
+
+@pytest_asyncio.fixture
+async def db_session(session_factory):
+    async with session_factory() as session:
+        yield session
+
+
+@pytest_asyncio.fixture
+async def client(test_engine, session_factory):
     async def _override_get_db_session():
         async with session_factory() as session:
             yield session

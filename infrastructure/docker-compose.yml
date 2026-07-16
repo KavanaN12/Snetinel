@@ -1,5 +1,3 @@
-version: "3.9"
-
 # Phase 2 scope only: Postgres + backend API.
 # Per SAD §10 and the Redis-deferral decision (approved during architecture
 # review), redis/worker/localstack/neo4j/ollama services are intentionally

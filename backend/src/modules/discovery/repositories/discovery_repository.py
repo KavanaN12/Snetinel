@@ -22,3 +22,14 @@ class DiscoveryRepository(Protocol):
     async def list_by_workspace(self, workspace_id: UUID | str) -> list[DiscoveryRun]: ...
 
     async def get_by_id(self, discovery_run_id: UUID | str) -> DiscoveryRun | None: ...
+
+    async def update_status(
+        self,
+        discovery_run_id: UUID | str,
+        *,
+        status: str | None = None,
+        summary: str | None = None,
+        resource_count: int | None = None,
+        discovered_resources: list[dict[str, str]] | None = None,
+        completed_at=None,
+    ) -> DiscoveryRun | None: ...

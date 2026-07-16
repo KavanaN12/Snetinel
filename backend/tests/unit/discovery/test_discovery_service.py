@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import pytest
 
 from src.modules.discovery.domain.entities import DiscoveryRun
+from src.modules.discovery.queue.job_queue import InMemoryJobQueue
 from src.modules.discovery.services.discovery_service import DiscoveryService
 from src.modules.workspace.domain.entities import Workspace
 from src.modules.workspace.domain.exceptions import WorkspaceAccessDeniedError
@@ -44,6 +45,9 @@ class FakeDiscoveryRepository:
     async def get_by_id(self, discovery_run_id) -> DiscoveryRun | None:
         return next((run for run in self.created_runs if run.id == discovery_run_id), None)
 
+    async def update_status(self, discovery_run_id, **kwargs) -> DiscoveryRun | None:
+        return next((run for run in self.created_runs if run.id == discovery_run_id), None)
+
 
 class FakeWorkspaceRepository:
     def __init__(self, workspace: Workspace) -> None:
@@ -68,15 +72,17 @@ async def test_run_creates_discovery_run_for_workspace_owner() -> None:
     )
     discovery_repo = FakeDiscoveryRepository()
     workspace_repo = FakeWorkspaceRepository(workspace)
-    service = DiscoveryService(discovery_repo, workspace_repo)
+    queue = InMemoryJobQueue()
+    service = DiscoveryService(discovery_repo, workspace_repo, queue=queue)
 
     run = await service.run(workspace.id, owner_id)
 
-    assert run.status == "completed"
+    assert run.status == "queued"
     assert run.workspace_id == workspace.id
-    assert run.resource_count == 3
+    assert run.resource_count == 0
     assert "Alpha Workspace" in run.summary
     assert discovery_repo.created_runs[0].id == run.id
+    assert len(queue._jobs) == 1
 
 
 @pytest.mark.asyncio

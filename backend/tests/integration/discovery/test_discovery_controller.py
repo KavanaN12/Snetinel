@@ -33,6 +33,6 @@ async def test_discovery_endpoint_creates_run_for_workspace_owner(client):
     assert discovery_response.status_code == 201
     body = discovery_response.json()
     assert body["workspace_id"] == workspace_id
-    assert body["status"] == "completed"
-    assert body["resource_count"] >= 1
-    assert body["summary"].startswith("Discovered workspace")
+    assert body["status"] == "queued"
+    assert body["resource_count"] == 0
+    assert body["summary"].startswith("Discovery queued")
