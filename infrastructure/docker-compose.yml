@@ -1,0 +1,48 @@
+version: "3.9"
+
+# Phase 2 scope only: Postgres + backend API.
+# Per SAD §10 and the Redis-deferral decision (approved during architecture
+# review), redis/worker/localstack/neo4j/ollama services are intentionally
+# NOT present here — they are added incrementally starting Phase 4, so this
+# file grows with the project instead of being written in full up front.
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: sentinel-postgres
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel
+      POSTGRES_DB: sentinel
+    ports:
+      - "5432:5432"
+    volumes:
+      - sentinel_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: sentinel-backend
+    env_file:
+      - ../backend/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sentinel:sentinel@postgres:5432/sentinel
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - ../backend:/app
+
+volumes:
+  sentinel_pg_data:
