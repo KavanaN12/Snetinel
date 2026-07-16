@@ -10,6 +10,7 @@ Refresh tokens are NOT JWTs — they are opaque random strings handled in
 modules/auth/services/auth_service.py and are out of scope for this file.
 """
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 from jose import JWTError, jwt
 
@@ -33,7 +34,12 @@ class JWTHandler:
     def create_access_token(user_id: str) -> str:
         now = datetime.now(timezone.utc)
         expire = now + timedelta(minutes=settings.ACCESS_TOKEN_TTL_MINUTES)
-        payload = {"sub": user_id, "iat": now, "exp": expire}
+        offset = (uuid4().int % 1000) / 1000000.0
+        payload = {
+            "sub": user_id,
+            "iat": now.timestamp() + offset,
+            "exp": expire.timestamp() + offset,
+        }
         return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
     @staticmethod

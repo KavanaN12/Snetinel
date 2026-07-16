@@ -8,6 +8,7 @@ from sqlalchemy import pool
 # Import Base and ALL module models so autogenerate can see them.
 from src.shared.db.session import Base
 from src.modules.auth.infrastructure.models import UserModel, RefreshTokenModel  # noqa: F401
+from src.modules.workspace.infrastructure.models import WorkspaceModel  # noqa: F401
 
 config = context.config
 
