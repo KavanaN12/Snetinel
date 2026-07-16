@@ -6,6 +6,9 @@ from src.modules.ai_explanation.schemas.responses import AIExplanationResponse
 
 
 class AIExplanationService:
+    def __init__(self, provider: Any | None = None) -> None:
+        self._provider = provider
+
     async def explain_finding(self, finding: dict[str, Any]) -> AIExplanationResponse:
         title = finding.get("title") or "Persisted finding"
         severity = (finding.get("severity") or "low").lower()
@@ -14,6 +17,24 @@ class AIExplanationService:
         if isinstance(evidence, dict):
             attack_type = evidence.get("attack_type")
         affected = finding.get("affected_resource_ids") or []
+
+        if self._provider is not None:
+            try:
+                summary = await self._provider.generate_text(
+                    f"Explain the security finding {title} with severity {severity}.",
+                    system_prompt="You are a concise security analyst.",
+                )
+                return AIExplanationResponse(
+                    summary=summary,
+                    details=[
+                        "The explanation was generated through the configured provider.",
+                        "No database changes were made during explanation generation.",
+                    ],
+                    confidence="high",
+                    fallback_used=False,
+                )
+            except Exception:
+                pass
 
         if title and attack_type and affected:
             summary = (

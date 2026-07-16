@@ -1,7 +1,7 @@
 """create findings table
 
-Revision ID: 0008
-Revises: 0007_create_attack_paths_table
+Revision ID: 0009
+Revises: 0008
 Create Date: 2026-07-16 00:00:00.000000
 
 """
@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = "0008"
-down_revision = "0007"
+revision = "0009"
+down_revision = "0008"
 branch_labels = None
 depends_on = None
 
