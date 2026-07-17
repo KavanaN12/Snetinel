@@ -7,10 +7,24 @@ config has one place to change and one place to mock in tests.
 """
 from functools import lru_cache
 
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: str | None) -> str | None:
+        if not value:
+            return value
+        if value.startswith("postgresql://"):
+            return value.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if value.startswith("postgres://"):
+            return value.replace("postgres://", "postgresql+asyncpg://", 1)
+        if value.startswith("postgresql+psycopg2://"):
+            return value.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
+        return value
+
     # --- App ---
     APP_NAME: str = "Sentinel"
     ENVIRONMENT: str = "development"  # development | test | production
@@ -31,6 +45,9 @@ class Settings(BaseSettings):
     # --- Rate limiting (login) ---
     LOGIN_RATE_LIMIT_ATTEMPTS: int = 5
     LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 300  # 5 minutes
+
+    # --- CORS / origins ---
+    CORS_ALLOW_ORIGINS: str = Field(default="http://localhost:5173,http://127.0.0.1:4173,http://127.0.0.1:5173")
 
     # --- Queue / Cloud discovery ---
     REDIS_URL: str = "redis://localhost:6379/0"

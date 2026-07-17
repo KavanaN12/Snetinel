@@ -3,18 +3,18 @@ services:
     image: postgres:16
     container_name: sentinel-postgres
     environment:
-      POSTGRES_USER: sentinel
-      POSTGRES_PASSWORD: sentinel
-      POSTGRES_DB: sentinel
+      POSTGRES_USER: ${POSTGRES_USER:-sentinel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinel}
     ports:
       - "5432:5432"
     volumes:
       - sentinel_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sentinel"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentinel}"]
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
     restart: unless-stopped
 
   redis:
@@ -24,22 +24,6 @@ services:
       - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  localstack:
-    image: localstack/localstack:3.6
-    container_name: sentinel-localstack
-    environment:
-      SERVICES: iam,s3,ec2
-      AWS_DEFAULT_REGION: us-east-1
-      EAGER_SERVICE_LOADING: 1
-    ports:
-      - "4566:4566"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -50,28 +34,26 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     container_name: sentinel-backend
-    env_file:
-      - ../backend/.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://sentinel:sentinel@postgres:5432/sentinel
-      REDIS_URL: redis://redis:6379/0
-      AWS_ENDPOINT_URL: http://localstack:4566
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:?set REDIS_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:?set CORS_ALLOW_ORIGINS}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-https://s3.us-east-1.amazonaws.com}
     ports:
       - "8000:8000"
+    command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      localstack:
-        condition: service_healthy
-    command: >
-      sh -c "alembic upgrade head &&
-             uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
-    volumes:
-      - ../backend:/app
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
       interval: 10s
@@ -98,24 +80,22 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     container_name: sentinel-worker
-    env_file:
-      - ../backend/.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://sentinel:sentinel@postgres:5432/sentinel
-      REDIS_URL: redis://redis:6379/0
-      AWS_ENDPOINT_URL: http://localstack:4566
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:?set REDIS_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-https://s3.us-east-1.amazonaws.com}
+    command: python -m src.worker
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      localstack:
-        condition: service_healthy
-    command: python -m src.worker
-    volumes:
-      - ../backend:/app
     restart: unless-stopped
 
 volumes:

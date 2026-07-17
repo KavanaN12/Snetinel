@@ -5,6 +5,7 @@ The auth router is already wired, and the workspace router is added here in
 line with the existing thin composition-root pattern.
 """
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.modules.ai_explanation.controllers.ai_explanation_controller import router as ai_explanation_router
 from src.modules.attack_path.controllers.attack_path_controller import router as attack_path_router
@@ -24,6 +25,17 @@ from src.shared.config.settings import get_settings
 settings = get_settings()
 
 app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
+
+origins = [origin.strip() for origin in settings.CORS_ALLOW_ORIGINS.split(",") if origin.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_origin_regex=r"^https://[a-zA-Z0-9.-]+\.onrender\.com$",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.middleware("http")(audit_middleware)
 

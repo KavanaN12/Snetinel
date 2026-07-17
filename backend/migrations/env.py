@@ -1,9 +1,22 @@
 import asyncio
+import os
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import async_engine_from_config
+
+
+def normalize_database_url(url: str | None) -> str | None:
+    if not url:
+        return None
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgresql+psycopg2://"):
+        return url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
+    return url
 
 # Import Base and ALL module models so autogenerate can see them.
 from src.shared.db.session import Base
@@ -16,6 +29,11 @@ from src.modules.risk_scoring.infrastructure.models import FindingModel  # noqa:
 from src.modules.audit.infrastructure.models import AuditLogModel  # noqa: F401
 
 config = context.config
+
+if os.getenv("DATABASE_URL"):
+    config.set_main_option("sqlalchemy.url", normalize_database_url(os.getenv("DATABASE_URL")))
+elif config.get_main_option("sqlalchemy.url"):
+    config.set_main_option("sqlalchemy.url", normalize_database_url(config.get_main_option("sqlalchemy.url")))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
