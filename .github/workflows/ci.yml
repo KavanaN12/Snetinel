@@ -11,6 +11,22 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: sentinel_test
+          POSTGRES_USER: sentinel
+          POSTGRES_PASSWORD: sentinel
+        options: >-
+          --health-cmd "pg_isready -U sentinel -d sentinel_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://sentinel:sentinel@localhost:5432/sentinel_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
