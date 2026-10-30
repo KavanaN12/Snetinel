@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -29,7 +29,6 @@ async def test_graph_build_and_list_endpoints(client, db_session):
     )
     assert workspace_response.status_code == 201
     workspace_id = workspace_response.json()["id"]
-
     build_response = await client.post(f"/api/v1/graph/workspaces/{workspace_id}/build", headers=headers)
     assert build_response.status_code == 200
     body = build_response.json()
@@ -66,10 +65,11 @@ async def test_graph_build_and_list_endpoints_persist_graph(client, db_session):
     )
     assert workspace_response.status_code == 201
     workspace_id = workspace_response.json()["id"]
+    user_policy_arn = "arn:aws:iam::000000000000:policy/policy-1"
 
     discovery_run = DiscoveryRunModel(
         id=uuid4(),
-        workspace_id=workspace_id,
+        workspace_id=UUID(workspace_id),
         status="completed",
         summary="Test discovery",
         resource_count=2,
@@ -81,24 +81,35 @@ async def test_graph_build_and_list_endpoints_persist_graph(client, db_session):
     await db_session.flush()
     db_session.add(
         CloudDiscoveredResourceModel(
-            workspace_id=workspace_id,
+            workspace_id=UUID(workspace_id),
             discovery_run_id=discovery_run.id,
             resource_type="iam_user",
             resource_id="alice",
             name="alice",
-            arn=None,
-            details={"user_id": "u1"},
+            arn="arn:aws:iam::000000000000:user/alice",
+            details={
+                "user_id": "u1",
+                "arn": "arn:aws:iam::000000000000:user/alice",
+                "attached_policy_arns": [user_policy_arn],
+            },
         )
     )
     db_session.add(
         CloudDiscoveredResourceModel(
-            workspace_id=workspace_id,
+            workspace_id=UUID(workspace_id),
             discovery_run_id=discovery_run.id,
             resource_type="iam_policy",
             resource_id="policy-1",
             name="policy-1",
-            arn=None,
-            details={"policy_id": "p1"},
+            arn=user_policy_arn,
+            details={
+                "policy_id": "p1",
+                "policy_arn": user_policy_arn,
+                "document": {
+                    "Version": "2012-10-17",
+                    "Statement": {"Effect": "Allow", "Action": "s3:ListBucket", "Resource": "*"},
+                },
+            },
         )
     )
     await db_session.commit()
@@ -118,4 +129,4 @@ async def test_graph_build_and_list_endpoints_persist_graph(client, db_session):
         ("iam_policy", "policy-1"),
         ("iam_user", "alice"),
     ]
-    assert list_body["edges"][0]["edge_type"] == "OWNS"
+    assert list_body["edges"][0]["edge_type"] == "ATTACHED_TO"

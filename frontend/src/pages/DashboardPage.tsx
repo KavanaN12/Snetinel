@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, CloudCog, ShieldAlert, Sparkles, Workflow } from 'lucide-react';
+import { AlertTriangle, CloudCog, Sparkles, Workflow } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { PageHeader } from '../components/common/PageHeader';
@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge';
 import { dashboardService, workspaceService } from '../services/sentinelApi';
 import { useWorkspaceStore } from '../store/workspace';
-import { formatDate } from '../lib/utils';
 
 export function DashboardPage() {
   const selectedWorkspaceId = useWorkspaceStore((state) => state.selectedWorkspaceId);
@@ -67,8 +66,8 @@ export function DashboardPage() {
       </PageHeader>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Overall risk score" value="87/100" subtitle="Elevated exposure" icon={<ShieldAlert className="h-5 w-5 text-rose-300" />} tone="danger" />
-        <MetricCard title="Compliance score" value="92%" subtitle="Framework aligned" icon={<Sparkles className="h-5 w-5 text-cyan-300" />} tone="info" />
+        <MetricCard title="Cloud resources" value={summary?.resource_counts.total?.toString() ?? '0'} subtitle="Discovered inventory" icon={<CloudCog className="h-5 w-5 text-cyan-300" />} tone="info" />
+        <MetricCard title="Open findings" value={summary?.finding_counts.open?.toString() ?? '0'} subtitle="Require attention" icon={<Sparkles className="h-5 w-5 text-cyan-300" />} tone="info" />
         <MetricCard title="Attack paths" value={summary?.attack_path_counts?.total?.toString() ?? '0'} subtitle="Critical routes" icon={<Workflow className="h-5 w-5 text-amber-300" />} tone="warning" />
         <MetricCard title="Critical findings" value={summary?.severity_counts.critical?.toString() ?? '0'} subtitle="High attention" icon={<AlertTriangle className="h-5 w-5 text-rose-300" />} tone="danger" />
       </div>
@@ -138,9 +137,9 @@ export function DashboardPage() {
             <CardTitle>Recent activity</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ActivityCard title="Discovery run completed" meta={workspace?.name ?? 'Workspace'} detail={formatDate(new Date().toISOString())} />
-            <ActivityCard title="Findings evaluated" meta="Automated scoring" detail="Risk graph updated 5 min ago" />
-            <ActivityCard title="Compliance review generated" meta="Framework results" detail="Resilience posture improved" />
+            <ActivityCard title="Current workspace" meta={workspace?.name ?? 'Workspace'} detail={`${summary?.resource_counts.total ?? 0} discovered resources`} />
+            <ActivityCard title="Finding status" meta="Backend risk-scoring results" detail={`${summary?.finding_counts.open ?? 0} open · ${summary?.finding_counts.resolved ?? 0} resolved`} />
+            <ActivityCard title="Attack path analysis" meta="Persisted graph analysis" detail={`${summary?.attack_path_counts.total ?? 0} paths currently recorded`} />
           </CardContent>
         </Card>
       </div>

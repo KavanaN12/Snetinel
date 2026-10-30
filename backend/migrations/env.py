@@ -27,6 +27,8 @@ from src.modules.graph.infrastructure.models import GraphNodeModel, GraphEdgeMod
 from src.modules.attack_path.infrastructure.models import AttackPathModel  # noqa: F401
 from src.modules.risk_scoring.infrastructure.models import FindingModel  # noqa: F401
 from src.modules.audit.infrastructure.models import AuditLogModel  # noqa: F401
+from src.modules.iam_analysis.infrastructure.models import IamAgentRunModel  # noqa: F401
+from src.modules.scenarios.infrastructure.models import ScenarioRunModel  # noqa: F401
 
 config = context.config
 

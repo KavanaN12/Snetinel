@@ -74,11 +74,12 @@ async def test_analyze_builds_attack_paths_from_graph() -> None:
         GraphNode(id=uuid.uuid4(), workspace_id=workspace.id, node_type="s3_bucket", external_id="bucket-1", name="bucket-1", details={}),
     ]
     edges = [
-        GraphEdge(id=uuid.uuid4(), workspace_id=workspace.id, source_node_id=nodes[0].id, target_node_id=nodes[2].id, edge_type="OWNS", details={}),
-        GraphEdge(id=uuid.uuid4(), workspace_id=workspace.id, source_node_id=nodes[1].id, target_node_id=nodes[2].id, edge_type="ATTACHED_TO", details={}),
+        GraphEdge(id=uuid.uuid4(), workspace_id=workspace.id, source_node_id=nodes[0].id, target_node_id=nodes[1].id, edge_type="ASSUME_ROLE", details={"effort_cost": 2}),
+        GraphEdge(id=uuid.uuid4(), workspace_id=workspace.id, source_node_id=nodes[1].id, target_node_id=nodes[2].id, edge_type="ATTACHED_TO", details={"privileged": True}),
+        GraphEdge(id=uuid.uuid4(), workspace_id=workspace.id, source_node_id=nodes[1].id, target_node_id=nodes[6].id, edge_type="CAN_ACCESS", details={"actions": ["s3:GetObject"]}),
+        GraphEdge(id=uuid.uuid4(), workspace_id=workspace.id, source_node_id=nodes[1].id, target_node_id=nodes[5].id, edge_type="CAN_ACCESS", details={"actions": ["ec2:StartInstances"]}),
         GraphEdge(id=uuid.uuid4(), workspace_id=workspace.id, source_node_id=nodes[3].id, target_node_id=nodes[4].id, edge_type="CONTAINS", details={}),
         GraphEdge(id=uuid.uuid4(), workspace_id=workspace.id, source_node_id=nodes[4].id, target_node_id=nodes[5].id, edge_type="ATTACHED_TO", details={}),
-        GraphEdge(id=uuid.uuid4(), workspace_id=workspace.id, source_node_id=nodes[3].id, target_node_id=nodes[6].id, edge_type="CONNECTED_TO", details={}),
     ]
     attack_repo = FakeAttackPathRepository()
     service = AttackPathService(
@@ -91,6 +92,6 @@ async def test_analyze_builds_attack_paths_from_graph() -> None:
 
     assert result.path_count >= 4
     assert any(path.attack_type == "iam_assume_role" for path in attack_repo.paths)
-    assert any(path.attack_type == "iam_policy_attachment" for path in attack_repo.paths)
+    assert any(path.attack_type == "ec2_access" for path in attack_repo.paths)
     assert any(path.attack_type == "s3_access" for path in attack_repo.paths)
-    assert any(path.attack_type == "security_group_ec2" for path in attack_repo.paths)
+    assert all("algorithms" in path.details for path in attack_repo.paths)

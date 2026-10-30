@@ -8,10 +8,13 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { workspaceService } from '../services/sentinelApi';
 import { useAuthStore } from '../store/auth';
+import { getApiErrorMessage } from '../api/client';
+import { useWorkspaceStore } from '../store/workspace';
 
 export function SettingsPage() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const setSelectedWorkspaceId = useWorkspaceStore((state) => state.setSelectedWorkspaceId);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const queryClient = useQueryClient();
@@ -23,10 +26,11 @@ export function SettingsPage() {
 
   const createWorkspace = useMutation({
     mutationFn: async () => (await workspaceService.create(name, description)).data,
-    onSuccess: () => {
+    onSuccess: (workspace) => {
       setName('');
       setDescription('');
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      setSelectedWorkspaceId(workspace.id);
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     },
   });
 
@@ -47,9 +51,19 @@ export function SettingsPage() {
           <CardContent className="space-y-3">
             <Input placeholder="Workspace name" value={name} onChange={(event) => setName(event.target.value)} />
             <Input placeholder="Optional description" value={description} onChange={(event) => setDescription(event.target.value)} />
-            <Button className="w-full" onClick={() => void createWorkspace.mutateAsync()}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Create workspace
+            <Button
+              className="w-full"
+              disabled={!name.trim() || createWorkspace.isPending}
+              onClick={() => createWorkspace.mutate()}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              {createWorkspace.isPending ? 'Creating…' : 'Create workspace'}
             </Button>
+            {createWorkspace.error ? (
+              <p role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-200">
+                {getApiErrorMessage(createWorkspace.error)}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
 

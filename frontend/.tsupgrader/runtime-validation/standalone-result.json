@@ -1,0 +1,27 @@
+{
+  "planHash": "029646c4290c97cfbf5c5eb19f2a80587563a988916fc4ef6fc1ad56068a710d",
+  "phase": "standalone",
+  "recordedAtUtc": "2026-10-30T19:42:11.7168498Z",
+  "retryCount": 2,
+  "resetBaseline": false,
+  "complete": true,
+  "result": {
+    "setupSucceeded": false,
+    "setupDurationMs": 4406,
+    "setupFailureOutput": "setup step 0 \u0027npm\u0027 failed (exit=-4048, timedOut=False)\r\nnpm warn EBADENGINE Unsupported engine {\r\nnpm warn EBADENGINE   package: \u0027@eslint/config-array@0.23.5\u0027,\r\nnpm warn EBADENGINE   required: { node: \u0027^20.19.0 || ^22.13.0 || \u003E=24\u0027 },\r\nnpm warn EBADENGINE   current: { node: \u0027v22.12.0\u0027, npm: \u002710.9.0\u0027 }\r\nnpm warn EBADENGINE }\r\nnpm warn EBADENGINE Unsupported engine {\r\nnpm warn EBADENGINE   package: \u0027@eslint/config-helpers@0.6.0\u0027,\r\nnpm warn EBADENGINE   required: { node: \u0027^20.19.0 || ^22.13.0 || \u003E=24\u0027 },\r\nnpm warn EBADENGINE   current: { node: \u0027v22.12.0\u0027, npm: \u002710.9.0\u0027 }\r\nnpm warn EBADENGINE }\r\nnpm warn EBADENGINE Unsupported engine {\r\nnpm warn EBADENGINE   package: \u0027@eslint/core@1.2.1\u0027,\r\nnpm warn EBADENGINE   required: { node: \u0027^20.19.0 || ^22.13.0 || \u003E=24\u0027 },\r\nnpm warn EBADENGINE   current: { node: \u0027v22.12.0\u0027, npm: \u002710.9.0\u0027 }\r\nnpm warn EBADENGINE }\r\nnpm warn EBADENGINE Unsupported engine {\r\nnpm warn EBADENGINE   package: \u0027@eslint/js@10.0.1\u0027,\r\nnpm warn EBADENGINE   required: { node: \u0027^20.19.0 || ^22.13.0 || \u003E=24\u0027 },\r\nnpm warn EBADENGINE   current: { node: \u0027v22.12.0\u0027, npm: \u002710.9.0\u0027 }\r\nnpm warn EBADENGINE }\r\nnpm warn EBADENGINE Unsupported engine {\r\nnpm warn EBADENGINE   package: \u0027@eslint/object-schema@3.0.5\u0027,\r\nnpm warn EBADENGINE   required: { node: \u0027^20.19.0 || ^22.13.0 || \u003E=24\u0027 },\r\nnpm warn EBADENGINE   current: { node: \u0027v22.12.0\u0027, npm: \u002710.9.0\u0027 }\r\nnpm warn EBADENGINE }\r\nnpm warn EBADENGINE Unsupported engine {\r\nnpm warn EBADENGINE   package: \u0027@eslint/plugin-kit@0.7.2\u0027,\r\nnpm warn EBADENGINE   required: { node: \u0027^20.19.0 || ^22.13.0 || \u003E=24\u0027 },\r\nnpm warn EBADENGINE   current: { node: \u0027v22.12.0\u0027, npm: \u002710.9.0\u0027 }\r\nnpm warn EBADENGINE }\r\nnpm warn EBADENGINE Unsupported engine {\r\nnpm warn EBADENGINE   package: \u0027eslint@10.7.0\u0027,\r\nnpm warn EBADENGINE   required: { node: \u0027^20.19.0 || ^22.13.0 || \u003E=24\u0027 },\r\nnpm warn EBADENGINE   current: { node: \u0027v22.12.0\u0027, npm: \u002710.9.0\u0027 }\r\nnpm warn EBADENGINE }\r\nnpm warn EBADENGINE Unsupported engine {\r\nnpm warn EBADENGINE   package: \u0027eslint-scope@9.1.2\u0027,\r\nnpm warn EBADENGINE   required: { node: \u0027^20.19.0 || ^22.13.0 || \u003E=24\u0027 },\r\nnpm warn EBADENGINE   current: { node: \u0027v22.12.0\u0027, npm: \u002710.9.0\u0027 }\r\nnpm warn EBADENGINE }\r\nnpm warn EBADENGINE Unsupported engine {\r\nnpm warn EBADENGINE   package: \u0027eslint-visitor-keys@5.0.1\u0027,\r\nnpm warn EBADENGINE   required: { node: \u0027^20.19.0 || ^22.13.0 || \u003E=24\u0027 },\r\nnpm warn EBADENGINE   current: { node: \u0027v22.12.0\u0027, npm: \u002710.9.0\u0027 }\r\nnpm warn EBADENGINE }\r\nnpm warn EBADENGINE Unsupported engine {\r\nnpm warn EBADENGINE   package: \u0027espree@11.2.0\u0027,\r\nnpm warn EBADENGINE   required: { node: \u0027^20.19.0 || ^22.13.0 || \u003E=24\u0027 },\r\nnpm warn EBADENGINE   current: { node: \u0027v22.12.0\u0027, npm: \u002710.9.0\u0027 }\r\nnpm warn EBADENGINE }\r\nnpm error code EPERM\r\nnpm error syscall unlink\r\nnpm error path D:\\sentinel\\frontend\\node_modules\\lightningcss-win32-x64-msvc\\lightningcss.win32-x64-msvc.node\r\nnpm error errno -4048\r\nnpm error [Error: EPERM: operation not permitted, unlink \u0027D:\\sentinel\\frontend\\node_modules\\lightningcss-win32-x64-msvc\\lightningcss.win32-x64-msvc.node\u0027] {\r\nnpm error   errno: -4048,\r\nnpm error   code: \u0027EPERM\u0027,\r\nnpm error   syscall: \u0027unlink\u0027,\r\nnpm error   path: \u0027D:\\\\sentinel\\\\frontend\\\\node_modules\\\\lightningcss-win32-x64-msvc\\\\lightningcss.win32-x64-msvc.node\u0027\r\nnpm error }\r\nnpm error\r\nnpm error The operation was rejected by your operating system.\r\nnpm error It\u0027s possible that the file was already in use (by a text editor or antivirus),\r\nnpm error or that you lack permissions to access it.\r\nnpm error\r\nnpm error If you believe this might be a permissions issue, please double-check the\r\nnpm error permissions of the file and its containing directories, or try running\r\nnpm error the command again as root/Administrator.\r\nnpm error A complete log of this run can be found in: D:\\npm-cache\\_logs\\2026-10-30T19_42_08_317Z-debug-0.log\r\n",
+    "assertions": [],
+    "executions": [
+      {
+        "source": "setup[0]",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "ci"
+        ],
+        "cwd": "D:\\sentinel\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}

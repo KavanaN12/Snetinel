@@ -7,7 +7,7 @@ transported over HTTP. The infrastructure layer maps ORM rows to these;
 the schemas layer maps these to API responses. Neither mapping happens here.
 """
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 
@@ -33,4 +33,9 @@ class RefreshToken:
         return self.revoked_at is not None
 
     def is_expired(self, now: datetime) -> bool:
-        return now >= self.expires_at
+        expires_at = self.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=timezone.utc)
+        return now >= expires_at

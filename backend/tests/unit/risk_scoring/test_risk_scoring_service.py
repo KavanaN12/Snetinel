@@ -49,3 +49,41 @@ async def test_generate_findings_from_attack_paths_is_deterministic():
     assert finding.status == "open"
     assert finding.affected_resource_ids == ["u1", "r1"]
     assert finding.evidence_subgraph["attack_type"] == "iam_assume_role"
+    assert finding.evidence_subgraph["risk_assessment"]["score"] == 65
+    assert finding.evidence_subgraph["risk_assessment"]["severity"] == "high"
+
+
+def test_deterministic_risk_engine_scores_sensitive_wildcard_access_higher():
+    from src.modules.risk_scoring.risk_engine import DeterministicRiskEngine
+
+    engine = DeterministicRiskEngine()
+    broad = engine.assess(
+        "kms_access",
+        [
+            {"node_type": "iam_user"},
+            {"node_type": "kms_key"},
+        ],
+        {
+            "algorithms": {"effort_cost": 1},
+            "edge_evidence": [
+                {"details": {"actions": ["kms:*"], "cross_account": True}}
+            ],
+        },
+    )
+    narrow = engine.assess(
+        "s3_access",
+        [
+            {"node_type": "iam_user"},
+            {"node_type": "s3_bucket"},
+        ],
+        {
+            "algorithms": {"effort_cost": 4},
+            "edge_evidence": [
+                {"details": {"actions": ["s3:GetObject"], "cross_account": False}}
+            ],
+        },
+    )
+
+    assert broad.score > narrow.score
+    assert broad.severity == "critical"
+    assert broad.evidence["observed_actions"] == ["kms:*"]

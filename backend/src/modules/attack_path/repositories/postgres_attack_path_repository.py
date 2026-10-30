@@ -15,12 +15,29 @@ class PostgresAttackPathRepository(AttackPathRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def delete_for_workspace(self, workspace_id: UUID) -> None:
-        await self._session.execute(AttackPathModel.__table__.delete().where(AttackPathModel.workspace_id == workspace_id))
+    async def delete_for_workspace(self, workspace_id: UUID | str) -> None:
+        normalized_workspace_id = _coerce_uuid(workspace_id)
+        await self._session.execute(
+            AttackPathModel.__table__.delete().where(
+                AttackPathModel.workspace_id == normalized_workspace_id
+            )
+        )
         await self._session.commit()
 
-    async def create(self, *, workspace_id: UUID, attack_type: str, steps: list[dict[str, Any]], details: dict[str, Any]):
-        model = AttackPathModel(workspace_id=workspace_id, attack_type=attack_type, steps=steps, details=details)
+    async def create(
+        self,
+        *,
+        workspace_id: UUID | str,
+        attack_type: str,
+        steps: list[dict[str, Any]],
+        details: dict[str, Any],
+    ):
+        model = AttackPathModel(
+            workspace_id=_coerce_uuid(workspace_id),
+            attack_type=attack_type,
+            steps=steps,
+            details=details,
+        )
         self._session.add(model)
         await self._session.flush()
         await self._session.commit()
@@ -33,8 +50,12 @@ class PostgresAttackPathRepository(AttackPathRepository):
             created_at=model.created_at,
         )
 
-    async def list_for_workspace(self, workspace_id: UUID):
-        result = await self._session.execute(select(AttackPathModel).where(AttackPathModel.workspace_id == workspace_id))
+    async def list_for_workspace(self, workspace_id: UUID | str):
+        result = await self._session.execute(
+            select(AttackPathModel).where(
+                AttackPathModel.workspace_id == _coerce_uuid(workspace_id)
+            )
+        )
         models = result.scalars().all()
         return [
             AttackPath(
@@ -47,3 +68,9 @@ class PostgresAttackPathRepository(AttackPathRepository):
             )
             for model in models
         ]
+
+
+def _coerce_uuid(value: UUID | str) -> UUID:
+    if isinstance(value, UUID):
+            return value
+    return UUID(str(value))

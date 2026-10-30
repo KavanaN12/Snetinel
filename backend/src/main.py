@@ -17,8 +17,10 @@ from src.modules.dashboard.controllers.dashboard_controller import router as das
 from src.modules.discovery.controllers.discovery_controller import router as discovery_router
 from src.modules.drift.controllers.drift_controller import router as drift_router
 from src.modules.graph.controllers.graph_controller import router as graph_router
+from src.modules.iam_analysis.controllers.iam_agent_controller import router as iam_agent_router
 from src.modules.rag.controllers.rag_controller import router as rag_router
 from src.modules.risk_scoring.controllers.risk_scoring_controller import router as risk_scoring_router
+from src.modules.scenarios.controllers.scenario_controller import router as scenario_router
 from src.modules.workspace.controllers.workspace_controller import router as workspace_router
 from src.shared.config.settings import get_settings
 
@@ -51,6 +53,8 @@ app.include_router(audit_router, prefix="/api/v1")
 app.include_router(compliance_router, prefix="/api/v1")
 app.include_router(drift_router, prefix="/api/v1")
 app.include_router(rag_router, prefix="/api/v1")
+app.include_router(iam_agent_router, prefix="/api/v1")
+app.include_router(scenario_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["health"])

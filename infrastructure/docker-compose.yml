@@ -3,9 +3,9 @@ services:
     image: postgres:16
     container_name: sentinel-postgres
     environment:
-      POSTGRES_USER: sentinel
-      POSTGRES_PASSWORD: sentinel
-      POSTGRES_DB: sentinel
+      POSTGRES_USER: ${POSTGRES_USER:-sentinel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinel}
     ports:
       - "5432:5432"
     volumes:
@@ -33,7 +33,7 @@ services:
     image: localstack/localstack:3.6
     container_name: sentinel-localstack
     environment:
-      SERVICES: iam,s3,ec2
+      SERVICES: iam,s3,ec2,kms,lambda,sts
       AWS_DEFAULT_REGION: us-east-1
       EAGER_SERVICE_LOADING: 1
     ports:
@@ -53,7 +53,7 @@ services:
     env_file:
       - ../backend/.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://sentinel:sentinel@postgres:5432/sentinel
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel}@postgres:5432/${POSTGRES_DB:-sentinel}
       REDIS_URL: redis://redis:6379/0
       AWS_ENDPOINT_URL: http://localstack:4566
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
@@ -88,6 +88,13 @@ services:
     container_name: sentinel-frontend
     ports:
       - "3000:80"
+    environment:
+      API_UPSTREAM: http://backend:8000
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
       backend:
         condition: service_healthy
@@ -101,7 +108,7 @@ services:
     env_file:
       - ../backend/.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://sentinel:sentinel@postgres:5432/sentinel
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel}@postgres:5432/${POSTGRES_DB:-sentinel}
       REDIS_URL: redis://redis:6379/0
       AWS_ENDPOINT_URL: http://localstack:4566
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
@@ -116,6 +123,15 @@ services:
     command: python -m src.worker
     volumes:
       - ../backend:/app
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os, redis; os.kill(1, 0); assert redis.Redis.from_url(os.environ['REDIS_URL']).ping()"
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
 volumes:

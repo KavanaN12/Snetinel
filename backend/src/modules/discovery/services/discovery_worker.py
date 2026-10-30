@@ -9,6 +9,7 @@ from src.modules.discovery.queue.job_queue import RedisJobQueue
 from src.modules.discovery.repositories.postgres_cloud_resource_repository import PostgresCloudResourceRepository
 from src.modules.discovery.repositories.postgres_discovery_repository import PostgresDiscoveryRepository
 from src.modules.discovery.services.cloud_discovery_service import CloudDiscoveryService
+from src.modules.scenarios.repositories import ScenarioRunRepository
 from src.modules.workspace.repositories.postgres_workspace_repository import PostgresWorkspaceRepository
 from src.shared.db.session import AsyncSessionLocal
 
@@ -39,6 +40,7 @@ class DiscoveryWorker:
                 discovery_repository=discovery_repository,
                 workspace_repository=workspace_repository,
                 cloud_resource_repository=cloud_resource_repository,
+                scenario_run_repository=ScenarioRunRepository(session),
             )
             try:
                 await cloud_discovery_service.process_discovery_job(workspace_id=workspace_id, discovery_run_id=discovery_run_id)

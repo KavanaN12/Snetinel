@@ -70,6 +70,13 @@ services:
     container_name: sentinel-frontend
     ports:
       - "3000:80"
+    environment:
+      API_UPSTREAM: http://backend:8000
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
       backend:
         condition: service_healthy
@@ -91,6 +98,15 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
       AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-https://s3.us-east-1.amazonaws.com}
     command: python -m src.worker
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os, redis; os.kill(1, 0); assert redis.Redis.from_url(os.environ['REDIS_URL']).ping()"
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
       postgres:
         condition: service_healthy

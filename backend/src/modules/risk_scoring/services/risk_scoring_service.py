@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 from src.modules.attack_path.repositories.attack_path_repository import AttackPathRepository
 from src.modules.risk_scoring.domain.entities import Finding, FindingEvaluationResult
 from src.modules.risk_scoring.repositories.finding_repository import FindingRepository
+from src.modules.risk_scoring.risk_engine import DeterministicRiskEngine
 from src.modules.workspace.domain.exceptions import WorkspaceNotFoundError
 from src.modules.workspace.repositories.workspace_repository import WorkspaceRepository
 
@@ -19,6 +20,7 @@ class RiskScoringService:
         self._workspace_repository = workspace_repository
         self._attack_path_repository = attack_path_repository
         self._finding_repository = finding_repository
+        self._risk_engine = DeterministicRiskEngine()
 
     async def generate_findings(self, workspace_id: UUID | str, current_user_id: UUID | str) -> FindingEvaluationResult:
         workspace = await self._workspace_repository.get_by_id(workspace_id)
@@ -31,8 +33,14 @@ class RiskScoringService:
         attack_paths = await self._attack_path_repository.list_for_workspace(workspace_id)
         findings: list[Finding] = []
         for attack_path in attack_paths:
-            severity = self._severity_for(attack_path.attack_type)
+            assessment = self._risk_engine.assess(
+                attack_path.attack_type,
+                attack_path.steps,
+                attack_path.details or {},
+            )
+            severity = assessment.severity
             title, description = self._build_finding_details(attack_path)
+            description = f"{description} Deterministic risk score: {assessment.score}/100."
             if self._finding_repository is None:
                 findings.append(
                     self._build_finding(
@@ -45,6 +53,7 @@ class RiskScoringService:
                             "attack_type": attack_path.attack_type,
                             "steps": attack_path.steps,
                             "edge_type": getattr(attack_path.details, "get", lambda *_: None)("edge_type"),
+                            "risk_assessment": assessment.evidence,
                         },
                         affected_resource_ids=[step.get("id") for step in attack_path.steps if step.get("id")],
                     )
@@ -61,6 +70,7 @@ class RiskScoringService:
                             "attack_type": attack_path.attack_type,
                             "steps": attack_path.steps,
                             "edge_type": attack_path.details.get("edge_type"),
+                            "risk_assessment": assessment.evidence,
                         },
                         affected_resource_ids=[step.get("id") for step in attack_path.steps if step.get("id")],
                     )
@@ -118,6 +128,9 @@ class RiskScoringService:
             "iam_assume_role": "Privileged IAM role assumption path",
             "iam_policy_attachment": "IAM policy attachment path",
             "s3_access": "S3 access exposure path",
+            "ec2_access": "EC2 access exposure path",
+            "kms_access": "KMS key access exposure path",
+            "lambda_access": "Lambda access exposure path",
             "security_group_ec2": "Security group to EC2 exposure path",
         }.get(attack_type, "Persisted attack path")
         description = (

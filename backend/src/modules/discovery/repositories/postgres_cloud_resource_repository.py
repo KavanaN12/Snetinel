@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.discovery.domain.entities import DiscoveredCloudResource
@@ -77,6 +77,24 @@ class PostgresCloudResourceRepository:
     async def get_by_id(self, resource_id: UUID | str) -> DiscoveredCloudResource | None:
         model = await self._session.get(CloudDiscoveredResourceModel, _coerce_uuid(resource_id))
         return _to_entity(model) if model else None
+
+    async def retain_snapshot(
+        self,
+        *,
+        workspace_id: UUID | str,
+        resource_keys: list[tuple[str, str]],
+    ) -> None:
+        statement = delete(CloudDiscoveredResourceModel).where(
+            CloudDiscoveredResourceModel.workspace_id == _coerce_uuid(workspace_id)
+        )
+        if resource_keys:
+            statement = statement.where(
+                tuple_(
+                    CloudDiscoveredResourceModel.resource_type,
+                    CloudDiscoveredResourceModel.resource_id,
+                ).not_in(resource_keys)
+            )
+        await self._session.execute(statement)
 
 
 def _coerce_uuid(value: UUID | str) -> UUID:

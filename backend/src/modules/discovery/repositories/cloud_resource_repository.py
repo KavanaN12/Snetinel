@@ -22,3 +22,10 @@ class CloudResourceRepository(Protocol):
     async def list_by_workspace(self, workspace_id: UUID | str) -> list[DiscoveredCloudResource]: ...
 
     async def get_by_id(self, resource_id: UUID | str) -> DiscoveredCloudResource | None: ...
+
+    async def retain_snapshot(
+        self,
+        *,
+        workspace_id: UUID | str,
+        resource_keys: list[tuple[str, str]],
+    ) -> None: ...

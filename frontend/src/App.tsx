@@ -12,6 +12,8 @@ const RegisterPage = lazy(() => import('./pages/RegisterPage').then((module) => 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const DiscoveryPage = lazy(() => import('./pages/DiscoveryPage').then((module) => ({ default: module.DiscoveryPage })));
 const AttackPathsPage = lazy(() => import('./pages/AttackPathsPage').then((module) => ({ default: module.AttackPathsPage })));
+const IamAgentPage = lazy(() => import('./pages/IamAgentPage').then((module) => ({ default: module.IamAgentPage })));
+const ScenariosPage = lazy(() => import('./pages/ScenariosPage').then((module) => ({ default: module.ScenariosPage })));
 const FindingsPage = lazy(() => import('./pages/FindingsPage').then((module) => ({ default: module.FindingsPage })));
 const CompliancePage = lazy(() => import('./pages/CompliancePage').then((module) => ({ default: module.CompliancePage })));
 const DriftPage = lazy(() => import('./pages/DriftPage').then((module) => ({ default: module.DriftPage })));
@@ -59,6 +61,8 @@ function App() {
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/discovery" element={<DiscoveryPage />} />
                 <Route path="/attack-paths" element={<AttackPathsPage />} />
+                <Route path="/iam-agent" element={<IamAgentPage />} />
+                <Route path="/scenarios" element={<ScenariosPage />} />
                 <Route path="/findings" element={<FindingsPage />} />
                 <Route path="/compliance" element={<CompliancePage />} />
                 <Route path="/drift" element={<DriftPage />} />

@@ -1,4 +1,5 @@
 import pytest
+from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,7 +34,7 @@ async def test_risk_scoring_dashboard_and_audit_flow(client, db_session: AsyncSe
 
     db_session.add(
         AttackPathModel(
-            workspace_id=workspace_id,
+            workspace_id=UUID(workspace_id),
             attack_type="iam_assume_role",
             steps=[
                 {"id": "u1", "node_type": "iam_user", "name": "alice"},

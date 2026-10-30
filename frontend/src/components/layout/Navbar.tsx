@@ -1,9 +1,8 @@
-import { Bell, Menu, Search, SunMoon } from 'lucide-react';
+import { Bell, Menu, SunMoon } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth';
 import { useThemeStore } from '../../store/theme';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 
 export function Navbar({ onMenuToggle }: { onMenuToggle: () => void }) {
   const location = useLocation();
@@ -29,10 +28,6 @@ export function Navbar({ onMenuToggle }: { onMenuToggle: () => void }) {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <label className="hidden items-center gap-2 rounded-full border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-slate-400 md:flex">
-          <Search className="h-4 w-4" />
-          <Input className="h-8 w-40 border-0 bg-transparent p-0 text-sm" placeholder="Search" />
-        </label>
         <Button variant="secondary" size="sm" onClick={toggleTheme}>
           <SunMoon className="h-4 w-4" />
         </Button>

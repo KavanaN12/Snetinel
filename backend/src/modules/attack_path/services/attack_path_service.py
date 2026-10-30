@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections import deque
 from uuid import UUID
 
 from src.modules.attack_path.domain.entities import AttackPath, AttackPathAnalysisResult
+from src.modules.attack_path.graph_algorithms import DirectedGraphAnalysis, WeightedEdge
 from src.modules.attack_path.repositories.attack_path_repository import AttackPathRepository
 from src.modules.graph.repositories.graph_repository import GraphRepository
 from src.modules.workspace.domain.exceptions import WorkspaceNotFoundError
@@ -32,43 +32,90 @@ class AttackPathService:
         await self._attack_path_repository.delete_for_workspace(workspace_id)
 
         node_lookup = {node.id: node for node in nodes}
-        adjacency: dict[UUID, list[tuple[UUID, str]]] = {node.id: [] for node in nodes}
+        adjacency: dict[UUID, list[WeightedEdge]] = {node.id: [] for node in nodes}
+        edge_lookup: dict[tuple[UUID, UUID], list] = {}
+        traversable_edges = {"ASSUME_ROLE", "PASS_ROLE", "CAN_ACCESS"}
         for edge in edges:
-            adjacency.setdefault(edge.source_node_id, []).append((edge.target_node_id, edge.edge_type))
-            adjacency.setdefault(edge.target_node_id, []).append((edge.source_node_id, edge.edge_type))
-
-        for node in nodes:
-            if node.node_type == "iam_user":
-                for target in [candidate for candidate in nodes if candidate.node_type == "iam_role"]:
-                    adjacency.setdefault(node.id, []).append((target.id, "ASSUME_ROLE"))
+            if edge.edge_type not in traversable_edges:
+                continue
+            effort = edge.details.get("effort_cost", 1.0)
+            adjacency.setdefault(edge.source_node_id, []).append(
+                WeightedEdge(edge.target_node_id, max(float(effort), 0.0))
+            )
+            edge_lookup.setdefault((edge.source_node_id, edge.target_node_id), []).append(edge)
 
         paths: list[AttackPath] = []
-        seen_paths: set[tuple[str, tuple[UUID, ...]]] = set()
+        sources = {
+            node.id for node in nodes if node.node_type in {"iam_user", "iam_role"}
+        }
+        targets = {
+            node.id
+            for node in nodes
+            if node.node_type in {"iam_role", "s3_bucket", "ec2_instance", "kms_key", "lambda_function"}
+            and (
+                node.node_type != "iam_role"
+                or any(
+                    edge.source_node_id == node.id
+                    and edge.edge_type == "ATTACHED_TO"
+                    and edge.details.get("privileged")
+                    for edge in edges
+                )
+            )
+        }
+        analysis = DirectedGraphAnalysis(adjacency)
+        choke_points = analysis.choke_points(sources, targets)
+        components = analysis.strongly_connected_components()
+        component_by_node = {
+            node_id: component_index
+            for component_index, component in enumerate(components)
+            for node_id in component
+        }
 
-        for start_node in nodes:
-            queue = deque([(start_node.id, [start_node.id], {start_node.id})])
-            while queue:
-                current_id, steps, visited = queue.popleft()
-                current_node = node_lookup[current_id]
-                for neighbor_id, edge_type in adjacency.get(current_id, []):
-                    if neighbor_id in visited:
-                        continue
-                    new_steps = steps + [neighbor_id]
-                    if len(new_steps) > 4:
-                        continue
-                    target_node = node_lookup[neighbor_id]
-                    path_type = self._path_type(current_node.node_type, target_node.node_type, edge_type)
-                    if path_type and (path_type, tuple(new_steps)) not in seen_paths:
-                        seen_paths.add((path_type, tuple(new_steps)))
-                        path = await self._attack_path_repository.create(
-                            workspace_id=workspace.id,
-                            attack_type=path_type,
-                            steps=[self._serialize_node(node_lookup[node_id]) for node_id in new_steps],
-                            details={"edge_type": edge_type},
-                        )
-                        paths.append(path)
-                    if len(new_steps) < 4:
-                        queue.append((neighbor_id, new_steps, visited | {neighbor_id}))
+        for source_id in sorted(sources, key=str):
+            for target_id in sorted(targets - {source_id}, key=str):
+                breadth_path = analysis.breadth_first_path(source_id, target_id)
+                if breadth_path is None or len(breadth_path) < 2:
+                    continue
+                depth_path = analysis.depth_first_path(source_id, target_id)
+                weighted_path = analysis.dijkstra_path(source_id, target_id)
+                if weighted_path is None:
+                    continue
+                selected_path = weighted_path[0]
+                target_node = node_lookup[target_id]
+                attack_type = self._target_attack_type(target_node.node_type)
+                if attack_type is None:
+                    continue
+                path_edges = [
+                    edge
+                    for source, target in zip(selected_path, selected_path[1:])
+                    for edge in edge_lookup.get((source, target), [])
+                ]
+                path = await self._attack_path_repository.create(
+                    workspace_id=workspace.id,
+                    attack_type=attack_type,
+                    steps=[self._serialize_node(node_lookup[node_id]) for node_id in selected_path],
+                    details={
+                        "algorithms": {
+                            "bfs": [str(node_id) for node_id in breadth_path],
+                            "dfs": [str(node_id) for node_id in depth_path or []],
+                            "dijkstra": [str(node_id) for node_id in selected_path],
+                            "effort_cost": weighted_path[1],
+                        },
+                        "edge_evidence": [
+                            {
+                                "source": str(edge.source_node_id),
+                                "target": str(edge.target_node_id),
+                                "type": edge.edge_type,
+                                "details": edge.details,
+                            }
+                            for edge in path_edges
+                        ],
+                        "blast_radius": len(analysis.blast_radius(source_id)) - 1,
+                        "choke_points": [str(node_id) for node_id in sorted(choke_points, key=str)],
+                        "strongly_connected_component": component_by_node.get(source_id),
+                    },
+                )
+                paths.append(path)
 
         return AttackPathAnalysisResult(workspace_id=workspace.id, path_count=len(paths), paths=paths)
 
@@ -81,18 +128,16 @@ class AttackPathService:
         return AttackPathAnalysisResult(workspace_id=workspace.id, path_count=len(paths), paths=paths)
 
     @staticmethod
-    def _path_type(source_type: str, target_type: str, edge_type: str) -> str | None:
-        if source_type == "iam_user" and target_type == "iam_role" and edge_type == "ASSUME_ROLE":
+    def _target_attack_type(target_type: str) -> str | None:
+        if target_type == "iam_role":
             return "iam_assume_role"
-        if source_type in {"iam_user", "iam_role"} and target_type == "iam_policy" and edge_type in {"OWNS", "ATTACHED_TO"}:
-            return "iam_policy_attachment"
-        if source_type == "vpc" and target_type == "s3_bucket" and edge_type == "CONNECTED_TO":
-            return "s3_access"
-        if source_type == "vpc" and target_type == "security_group" and edge_type == "CONTAINS":
-            return "security_group_ec2"
-        if source_type == "security_group" and target_type == "ec2_instance" and edge_type == "ATTACHED_TO":
-            return "security_group_ec2"
-        return None
+        resource_types = {
+            "s3_bucket": "s3_access",
+            "ec2_instance": "ec2_access",
+            "kms_key": "kms_access",
+            "lambda_function": "lambda_access",
+        }
+        return resource_types.get(target_type)
 
     @staticmethod
     def _serialize_node(node) -> dict:

@@ -8,7 +8,11 @@ import type {
   DiscoveryRunResponse,
   DriftEventResponse,
   FindingEvaluationResponse,
+  IamAgentRunResponse,
   RagDocumentResponse,
+  ScenarioAssertionResponse,
+  ScenarioDefinitionResponse,
+  ScenarioRunResponse,
   TokenResponse,
   UserResponse,
   WorkspaceResponse,
@@ -75,4 +79,28 @@ export const ragService = {
 
 export const graphService = {
   buildGraph: (workspaceId: string) => apiClient.post(`/graph/workspaces/${workspaceId}/build`),
+};
+
+export const iamAgentService = {
+  run: (workspaceId: string, maxAttempts = 5) =>
+    apiClient.post<IamAgentRunResponse>(`/iam-agent/workspaces/${workspaceId}/run`, { max_attempts: maxAttempts }),
+  listRuns: (workspaceId: string) =>
+    apiClient.get<IamAgentRunResponse[]>(`/iam-agent/workspaces/${workspaceId}/runs`),
+};
+
+export const scenarioService = {
+  listCatalog: () => apiClient.get<ScenarioDefinitionResponse[]>('/scenarios/catalog'),
+  listRuns: (workspaceId: string) =>
+    apiClient.get<ScenarioRunResponse[]>(`/scenarios/workspaces/${workspaceId}/runs`),
+  load: (workspaceId: string, scenarioId: string) =>
+    apiClient.post<ScenarioRunResponse>(`/scenarios/workspaces/${workspaceId}/runs`, { scenario_id: scenarioId }),
+  assert: (workspaceId: string, runId: string, phase: 'baseline' | 'post_remediation') =>
+    apiClient.post<ScenarioAssertionResponse>(
+      `/scenarios/workspaces/${workspaceId}/runs/${runId}/assertions`,
+      { phase },
+    ),
+  reset: (workspaceId: string, runId: string) =>
+    apiClient.post<ScenarioRunResponse>(
+      `/scenarios/workspaces/${workspaceId}/runs/${runId}/reset`,
+    ),
 };

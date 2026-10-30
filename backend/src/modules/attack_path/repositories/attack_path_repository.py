@@ -6,13 +6,20 @@ from uuid import UUID
 
 class AttackPathRepository(ABC):
     @abstractmethod
-    async def delete_for_workspace(self, workspace_id: UUID) -> None:
-        raise NotImplementedError
+    async def delete_for_workspace(self, workspace_id: UUID | str) -> None:
+        ...
 
     @abstractmethod
-    async def create(self, *, workspace_id: UUID, attack_type: str, steps: list[dict], details: dict):
-        raise NotImplementedError
+    async def create(
+        self,
+        *,
+        workspace_id: UUID | str,
+        attack_type: str,
+        steps: list[dict],
+        details: dict,
+    ):
+        ...
 
     @abstractmethod
-    async def list_for_workspace(self, workspace_id: UUID):
-        raise NotImplementedError
+    async def list_for_workspace(self, workspace_id: UUID | str):
+        ...

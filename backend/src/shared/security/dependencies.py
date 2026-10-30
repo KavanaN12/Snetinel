@@ -15,11 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.shared.db.session import get_db_session
 from src.shared.security.jwt_handler import JWTHandler, TokenExpiredError, TokenInvalidError
 
-_bearer_scheme = HTTPBearer(auto_error=True)
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_current_user_id(
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
 ) -> str:
     """
     Decodes and validates the access token, returning the authenticated
@@ -27,6 +27,12 @@ async def get_current_user_id(
     to authenticate; existence/activity checks on the user happen wherever
     a downstream service actually needs the full user record.
     """
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Bearer authentication is required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     token = credentials.credentials
     try:
         return JWTHandler.decode_access_token(token)

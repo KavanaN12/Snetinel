@@ -1,8 +1,12 @@
-import axios, { type AxiosError } from 'axios';
+import axios, {
+  AxiosError,
+  type InternalAxiosRequestConfig,
+} from 'axios';
 
 const fallbackBaseURL = '/api/v1';
 const normalizeBaseURL = (value: string) => value.replace(/\/+$/, '');
 const baseURL = normalizeBaseURL(import.meta.env.VITE_API_BASE_URL || fallbackBaseURL);
+const storageKey = 'sentinel-auth';
 
 const apiClient = axios.create({
   baseURL,
@@ -13,12 +17,25 @@ const apiClient = axios.create({
   },
 });
 
+type StoredTokenState = {
+  state?: {
+    accessToken?: string;
+    refreshToken?: string;
+  };
+};
+
+type RetriableRequestConfig = InternalAxiosRequestConfig & { _retriedAfterRefresh?: boolean };
+type TokenResponse = { access_token: string; refresh_token: string };
+
+let refreshPromise: Promise<TokenResponse> | null = null;
+let loginRedirectStarted = false;
+
 function getStoredTokens() {
   if (typeof window === 'undefined') return { accessToken: null as string | null, refreshToken: null as string | null };
-  const raw = window.localStorage.getItem('sentinel-auth');
+  const raw = window.localStorage.getItem(storageKey);
   if (!raw) return { accessToken: null, refreshToken: null };
   try {
-    const parsed = JSON.parse(raw) as { state?: { accessToken?: string; refreshToken?: string } };
+    const parsed = JSON.parse(raw) as StoredTokenState;
     return {
       accessToken: parsed.state?.accessToken ?? null,
       refreshToken: parsed.state?.refreshToken ?? null,
@@ -26,6 +43,43 @@ function getStoredTokens() {
   } catch {
     return { accessToken: null, refreshToken: null };
   }
+}
+
+function clearStoredSession() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(storageKey);
+  if (!loginRedirectStarted && window.location.pathname !== '/login') {
+    loginRedirectStarted = true;
+    window.location.assign('/login');
+  }
+}
+
+function persistTokens(tokens: TokenResponse, fallbackRefreshToken: string) {
+  if (typeof window === 'undefined') return;
+  const raw = window.localStorage.getItem(storageKey);
+  if (!raw) throw new Error('Stored authentication state is missing during token refresh.');
+  const parsed = JSON.parse(raw) as StoredTokenState;
+  parsed.state = {
+    ...parsed.state,
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token || fallbackRefreshToken,
+  };
+  window.localStorage.setItem(storageKey, JSON.stringify(parsed));
+}
+
+function refreshTokens(refreshToken: string): Promise<TokenResponse> {
+  if (!refreshPromise) {
+    refreshPromise = apiClient
+      .post<TokenResponse>('/auth/refresh', { refresh_token: refreshToken })
+      .then(({ data }) => {
+        persistTokens(data, refreshToken);
+        return data;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
 }
 
 apiClient.interceptors.request.use((config) => {
@@ -56,39 +110,37 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<{ detail?: string }>) => {
     const status = error.response?.status;
-    if (status === 401) {
-      const { refreshToken } = getStoredTokens();
-      if (refreshToken) {
-        try {
-          const response = await apiClient.post('/auth/refresh', { refresh_token: refreshToken });
-          const nextToken = response.data as { access_token?: string; refresh_token?: string };
-          if (nextToken.access_token && typeof window !== 'undefined') {
-            const raw = window.localStorage.getItem('sentinel-auth');
-            if (raw) {
-              const parsed = JSON.parse(raw) as { state?: Record<string, unknown> };
-              parsed.state = {
-                ...parsed.state,
-                accessToken: nextToken.access_token,
-                refreshToken: nextToken.refresh_token ?? refreshToken,
-              };
-              window.localStorage.setItem('sentinel-auth', JSON.stringify(parsed));
-            }
-            const originalRequest = error.config;
-            if (originalRequest) {
-              originalRequest.headers.Authorization = `Bearer ${nextToken.access_token}`;
-              return apiClient(originalRequest);
-            }
-          }
-        } catch {
-          // fall through to logout
-        }
-      }
-          if (typeof window !== 'undefined') {
-        window.localStorage.removeItem('sentinel-auth');
-        window.location.assign('/login');
-      }
+    const originalRequest = error.config as RetriableRequestConfig | undefined;
+    if (status !== 401 || !originalRequest) return Promise.reject(error);
+
+    const requestUrl = originalRequest.url ?? '';
+    if (requestUrl.endsWith('/auth/refresh')) {
+      clearStoredSession();
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+    if (requestUrl.endsWith('/auth/login') || requestUrl.endsWith('/auth/register')) {
+      return Promise.reject(error);
+    }
+    if (originalRequest._retriedAfterRefresh) {
+      clearStoredSession();
+      return Promise.reject(error);
+    }
+
+    const { refreshToken } = getStoredTokens();
+    if (!refreshToken) {
+      clearStoredSession();
+      return Promise.reject(error);
+    }
+
+    originalRequest._retriedAfterRefresh = true;
+    try {
+      const tokens = await refreshTokens(refreshToken);
+      originalRequest.headers.Authorization = `Bearer ${tokens.access_token}`;
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      clearStoredSession();
+      return Promise.reject(refreshError);
+    }
   },
 );
 

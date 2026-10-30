@@ -8,6 +8,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { ragService } from '../services/sentinelApi';
+import { getApiErrorMessage } from '../api/client';
 
 export function RagPage() {
   const [query, setQuery] = useState('');
@@ -46,9 +47,15 @@ export function RagPage() {
             <Input placeholder="Document title" value={title} onChange={(event) => setTitle(event.target.value)} />
             <Input placeholder="Source" value={source} onChange={(event) => setSource(event.target.value)} />
             <textarea className="min-h-40 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-200" placeholder="Document content" value={content} onChange={(event) => setContent(event.target.value)} />
-            <Button onClick={() => void uploadMutation.mutateAsync()} className="w-full">
-              <UploadCloud className="mr-2 h-4 w-4" /> Upload document
+            <Button
+              disabled={!title.trim() || !content.trim() || !source.trim() || uploadMutation.isPending}
+              onClick={() => uploadMutation.mutate()}
+              className="w-full"
+            >
+              <UploadCloud className="mr-2 h-4 w-4" />
+              {uploadMutation.isPending ? 'Uploading…' : 'Upload document'}
             </Button>
+            {uploadMutation.error ? <p role="alert" className="text-sm text-rose-300">{getApiErrorMessage(uploadMutation.error)}</p> : null}
           </CardContent>
         </Card>
         <Card>
@@ -60,9 +67,15 @@ export function RagPage() {
               <Search className="h-4 w-4" />
               <Input value={query} onChange={(event) => setQuery(event.target.value)} className="h-8 border-0 bg-transparent p-0" placeholder="Search documents" />
             </label>
-            <Button variant="secondary" onClick={() => void searchMutation.mutateAsync(query)} className="w-full">
-              Search
+            <Button
+              variant="secondary"
+              disabled={searchMutation.isPending}
+              onClick={() => searchMutation.mutate(query)}
+              className="w-full"
+            >
+              {searchMutation.isPending ? 'Searching…' : 'Search'}
             </Button>
+            {searchMutation.error ? <p role="alert" className="text-sm text-rose-300">{getApiErrorMessage(searchMutation.error)}</p> : null}
             {results.length === 0 ? (
               <EmptyState title="No documents returned" description="Search the knowledge base to surface matched policy or incident context." />
             ) : (

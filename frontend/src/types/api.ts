@@ -123,6 +123,86 @@ export interface AuditLogResponse {
   status_code: number;
 }
 
+export interface IamAgentAttempt {
+  attempt: number;
+  action: string;
+  resource_arn: string;
+  principal_type: string;
+  principal_name: string;
+  execution_status: string;
+  execution_verified: boolean;
+  verification_passed: boolean;
+  remaining_target_paths: number;
+  remaining_attack_paths?: number;
+  rollback: Record<string, string>;
+}
+
+export interface IamAgentEvaluation {
+  baseline_attack_paths: number;
+  final_attack_paths: number;
+  attack_path_reduction_percent: number | null;
+  baseline_average_risk: number | null;
+  final_average_risk: number | null;
+  risk_reduction_percent: number | null;
+  remediation_success_rate: number | null;
+  verification_success_rate: number | null;
+  unnecessary_permission_changes: number;
+  replanning_attempts: number;
+  execution_time_seconds: number;
+}
+
+export interface IamAgentLifecycleEvent extends Record<string, unknown> {
+  stage: string;
+  status: string;
+  timestamp: string;
+}
+
+export interface IamAgentRunResponse {
+  id: string;
+  workspace_id: string;
+  status: string;
+  lifecycle: IamAgentLifecycleEvent[];
+  attempts: IamAgentAttempt[];
+  baseline_path_count: number;
+  final_path_count: number;
+  evaluation: IamAgentEvaluation;
+  created_at: string;
+}
+
+export interface ScenarioDefinitionResponse {
+  scenario_id: string;
+  name: string;
+  difficulty: string;
+  description: string;
+  expected_resources: string[];
+  expected_vulnerabilities: string[];
+  expected_attack_paths: string;
+  expected_min_paths: number;
+  expected_max_paths: number | null;
+  expected_risk: string;
+  expected_remediation: string;
+  expected_post_state: string;
+}
+
+export interface ScenarioRunResponse {
+  id: string;
+  workspace_id: string;
+  scenario_id: string;
+  status: string;
+  resource_manifest: Record<string, unknown>;
+  expected_results: Record<string, unknown>;
+  actual_results: Record<string, unknown>;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface ScenarioAssertionResponse {
+  phase: string;
+  expected: Record<string, unknown>;
+  actual: Record<string, unknown>;
+  passed: boolean;
+}
+
 export interface RagDocumentResponse {
   id: string;
   title: string;

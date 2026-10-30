@@ -1,0 +1,55 @@
+{
+  "generatedAt": "2026-10-30T00:00:00Z",
+  "generatedOnPlatform": "win32",
+  "projectType": "webapp",
+  "devServer": {
+    "command": "npm",
+    "args": ["run", "dev", "--", "--port=4173"],
+    "url": "http://127.0.0.1:4173/",
+    "readyTimeoutSeconds": 120
+  },
+  "setup": [
+    {
+      "command": "npm",
+      "args": ["ci"],
+      "timeoutSeconds": 600
+    }
+  ],
+  "assertions": [
+    {
+      "name": "build",
+      "kind": "process",
+      "command": "npm",
+      "args": ["run", "build"],
+      "verificationMethod": "exit-code",
+      "expected": "0",
+      "timeoutSeconds": 180
+    },
+    {
+      "name": "lint",
+      "kind": "process",
+      "command": "npm",
+      "args": ["run", "lint"],
+      "verificationMethod": "exit-code",
+      "expected": "0",
+      "timeoutSeconds": 180
+    },
+    {
+      "name": "tests-pass",
+      "kind": "process",
+      "command": "npm",
+      "args": ["test"],
+      "verificationMethod": "test-results",
+      "expected": "0",
+      "timeoutSeconds": 300
+    },
+    {
+      "name": "login-register-navigation",
+      "kind": "playwright-route",
+      "scriptPath": ".tsupgrader/runtime-validation/playwright-scripts/login-register-navigation.spec.ts",
+      "verificationMethod": "exit-code",
+      "expected": "0",
+      "timeoutSeconds": 120
+    }
+  ]
+}

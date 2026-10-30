@@ -1,5 +1,9 @@
+from datetime import datetime, timezone
+from uuid import uuid4
+
 import pytest
 
+from src.modules.auth.domain.entities import RefreshToken
 from src.modules.auth.domain.exceptions import (
     InvalidCredentialsError,
     TokenNotFoundError,
@@ -8,6 +12,18 @@ from src.modules.auth.domain.exceptions import (
 )
 from src.modules.auth.services.auth_service import AuthService
 from tests.unit.auth.fakes import FakeRefreshTokenRepository, FakeUserRepository
+
+
+def test_refresh_expiry_normalizes_naive_database_timestamp_as_utc() -> None:
+    token = RefreshToken(
+        id=uuid4(),
+        user_id=uuid4(),
+        token_hash="hash",
+        expires_at=datetime(2025, 1, 1, 0, 0, 0),
+        revoked_at=None,
+    )
+
+    assert token.is_expired(datetime(2025, 1, 1, 0, 0, 1, tzinfo=timezone.utc))
 
 
 @pytest.fixture

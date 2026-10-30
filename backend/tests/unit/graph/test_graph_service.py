@@ -124,6 +124,154 @@ async def test_build_graph_creates_nodes_and_edges_from_resources() -> None:
     response = await service.build_graph(workspace.id, owner_id)
 
     assert response.node_count == 3
-    assert response.edge_count == 1
+    assert response.edge_count == 0
     assert any(node.node_type == "iam_user" for node in graph_repo.nodes)
-    assert any(edge.edge_type == "OWNS" for edge in graph_repo.edges)
+    assert not any(edge.edge_type == "ATTACHED_TO" for edge in graph_repo.edges)
+
+
+@pytest.mark.asyncio
+async def test_build_graph_adds_role_assumption_only_when_identity_and_trust_allow_it() -> None:
+    owner_id = uuid.uuid4()
+    workspace = Workspace(
+        id=uuid.uuid4(),
+        owner_id=owner_id,
+        name="IAM Workspace",
+        description="Effective permissions",
+        created_at=datetime.now(timezone.utc),
+        updated_at=None,
+    )
+    principal_arn = "arn:aws:iam::123456789012:user/alice"
+    role_arn = "arn:aws:iam::123456789012:role/deployer"
+    policy_arn = "arn:aws:iam::123456789012:policy/assume-deployer"
+    resources = [
+        type(
+            "Resource",
+            (),
+            {
+                "workspace_id": workspace.id,
+                "resource_type": "iam_user",
+                "resource_id": "alice",
+                "name": "alice",
+                "arn": principal_arn,
+                "details": {
+                    "arn": principal_arn,
+                    "attached_policy_arns": [policy_arn],
+                },
+            },
+        )(),
+        type(
+            "Resource",
+            (),
+            {
+                "workspace_id": workspace.id,
+                "resource_type": "iam_role",
+                "resource_id": "deployer",
+                "name": "deployer",
+                "arn": role_arn,
+                "details": {
+                    "arn": role_arn,
+                    "trust_policy": {
+                        "Statement": {
+                            "Effect": "Allow",
+                            "Principal": {"AWS": principal_arn},
+                            "Action": "sts:AssumeRole",
+                        }
+                    },
+                },
+            },
+        )(),
+        type(
+            "Resource",
+            (),
+            {
+                "workspace_id": workspace.id,
+                "resource_type": "iam_policy",
+                "resource_id": policy_arn,
+                "name": "assume-deployer",
+                "arn": policy_arn,
+                "details": {
+                    "policy_arn": policy_arn,
+                    "document": {
+                        "Statement": {
+                            "Effect": "Allow",
+                            "Action": "sts:AssumeRole",
+                            "Resource": role_arn,
+                        }
+                    },
+                },
+            },
+        )(),
+    ]
+    graph_repo = FakeGraphRepository()
+    service = GraphService(
+        workspace_repository=FakeWorkspaceRepository(workspace),
+        cloud_resource_repository=FakeCloudResourceRepository(resources),
+        graph_repository=graph_repo,
+    )
+
+    await service.build_graph(workspace.id, owner_id)
+
+    assumption_edges = [edge for edge in graph_repo.edges if edge.edge_type == "ASSUME_ROLE"]
+    assert len(assumption_edges) == 1
+    assert assumption_edges[0].details["permission_statements"]
+    assert assumption_edges[0].details["trust_statements"]
+
+
+@pytest.mark.asyncio
+async def test_build_graph_does_not_infer_role_assumption_from_trust_policy_alone() -> None:
+    owner_id = uuid.uuid4()
+    workspace = Workspace(
+        id=uuid.uuid4(),
+        owner_id=owner_id,
+        name="IAM Workspace",
+        description="No identity permission",
+        created_at=datetime.now(timezone.utc),
+        updated_at=None,
+    )
+    principal_arn = "arn:aws:iam::123456789012:user/alice"
+    role_arn = "arn:aws:iam::123456789012:role/deployer"
+    resources = [
+        type(
+            "Resource",
+            (),
+            {
+                "workspace_id": workspace.id,
+                "resource_type": "iam_user",
+                "resource_id": "alice",
+                "name": "alice",
+                "arn": principal_arn,
+                "details": {"arn": principal_arn},
+            },
+        )(),
+        type(
+            "Resource",
+            (),
+            {
+                "workspace_id": workspace.id,
+                "resource_type": "iam_role",
+                "resource_id": "deployer",
+                "name": "deployer",
+                "arn": role_arn,
+                "details": {
+                    "arn": role_arn,
+                    "trust_policy": {
+                        "Statement": {
+                            "Effect": "Allow",
+                            "Principal": {"AWS": principal_arn},
+                            "Action": "sts:AssumeRole",
+                        }
+                    },
+                },
+            },
+        )(),
+    ]
+    graph_repo = FakeGraphRepository()
+    service = GraphService(
+        workspace_repository=FakeWorkspaceRepository(workspace),
+        cloud_resource_repository=FakeCloudResourceRepository(resources),
+        graph_repository=graph_repo,
+    )
+
+    await service.build_graph(workspace.id, owner_id)
+
+    assert not any(edge.edge_type == "ASSUME_ROLE" for edge in graph_repo.edges)

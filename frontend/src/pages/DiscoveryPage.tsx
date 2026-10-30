@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { RotateCw, Search } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorState } from '../components/common/ErrorState';
@@ -20,6 +20,7 @@ export function DiscoveryPage() {
   const setSelectedWorkspaceId = useWorkspaceStore((state) => state.setSelectedWorkspaceId);
   const [search, setSearch] = useState('');
   const [selectedResource, setSelectedResource] = useState<DiscoveredResource | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: workspaceData, isLoading: workspacesLoading } = useQuery({ queryKey: ['workspaces'], queryFn: async () => (await workspaceService.list()).data });
   const workspace = workspaceData?.find((item) => item.id === selectedWorkspaceId) ?? workspaceData?.[0];
@@ -28,6 +29,16 @@ export function DiscoveryPage() {
     queryKey: ['discovery-resources', workspace?.id],
     queryFn: async () => (await discoveryService.getResources(workspace!.id)).data,
     enabled: Boolean(workspace?.id),
+  });
+
+  const discoveryMutation = useMutation({
+    mutationFn: async (workspaceId: string) => (await discoveryService.triggerDiscovery(workspaceId)).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['discovery-resources', workspace?.id] }),
+        queryClient.invalidateQueries({ queryKey: ['discovery-runs', workspace?.id] }),
+      ]);
+    },
   });
 
   const filteredResources = useMemo(() => {
@@ -54,7 +65,20 @@ export function DiscoveryPage() {
             </option>
           ))}
         </select>
+        <Button
+          disabled={!workspace?.id || discoveryMutation.isPending}
+          onClick={() => workspace?.id && discoveryMutation.mutate(workspace.id)}
+        >
+          <RotateCw className={`mr-2 h-4 w-4 ${discoveryMutation.isPending ? 'animate-spin' : ''}`} />
+          {discoveryMutation.isPending ? 'Discovering…' : 'Run discovery'}
+        </Button>
       </PageHeader>
+
+      {discoveryMutation.error ? (
+        <div role="alert" className="mb-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-200">
+          Discovery failed: {discoveryMutation.error instanceof Error ? discoveryMutation.error.message : 'Request failed'}
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

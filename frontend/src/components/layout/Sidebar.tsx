@@ -1,4 +1,4 @@
-import { Compass, LayoutDashboard, LogOut, Radar, ScanSearch, Settings, ShieldCheck, Sparkles, BookOpenText, ScrollText, TrendingUp, Waves } from 'lucide-react';
+import { Bot, Compass, LayoutDashboard, LogOut, Radar, ScanSearch, Settings, ShieldCheck, Sparkles, BookOpenText, ScrollText, TrendingUp, Waves, FlaskConical } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth';
 import { cn } from '../../lib/utils';
@@ -7,6 +7,8 @@ const links = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/discovery', label: 'Cloud Discovery', icon: Compass },
   { to: '/attack-paths', label: 'Attack Paths', icon: Radar },
+  { to: '/iam-agent', label: 'Autonomous IAM', icon: Bot },
+  { to: '/scenarios', label: 'Scenario Library', icon: FlaskConical },
   { to: '/findings', label: 'Findings', icon: ScanSearch },
   { to: '/compliance', label: 'Compliance', icon: ShieldCheck },
   { to: '/drift', label: 'Drift Detection', icon: Waves },
@@ -46,14 +48,8 @@ export function Sidebar({ collapsed = false, onClose }: { collapsed?: boolean; o
           <div className="rounded-full bg-emerald-500/15 p-2 text-emerald-300">
             <TrendingUp className="h-4 w-4" />
           </div>
-          {!collapsed ? <div><p className="text-sm font-medium text-slate-200">Threat posture</p><p className="text-xs text-slate-400">Elevated visibility</p></div> : null}
+          {!collapsed ? <div><p className="text-sm font-medium text-slate-200">Execution safeguards</p><p className="text-xs text-slate-400">LocalStack-only IAM changes</p></div> : null}
         </div>
-        {!collapsed ? (
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>Runtime integrity</span>
-            <span className="text-emerald-300">97%</span>
-          </div>
-        ) : null}
       </div>
 
       <button onClick={logout} className="mt-4 flex items-center gap-3 rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-400 transition hover:bg-slate-800/70 hover:text-slate-100">
